@@ -1,0 +1,15 @@
+services:
+  valkey:
+    image: valkey/valkey:9
+    ports:
+      - "6379:6379"
+
+  valuator1:
+    build: ./Valuator
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__Redis: "valkey:6379"
+    depends_on:
+      - valkey
