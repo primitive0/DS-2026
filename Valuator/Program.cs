@@ -1,4 +1,5 @@
 using StackExchange.Redis;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace Valuator;
 
@@ -10,6 +11,11 @@ public class Program
 
         // Add services to the container.
         builder.Services.AddRazorPages();
+
+        builder.Services
+            .AddDataProtection()
+            .PersistKeysToFileSystem(new DirectoryInfo("/keys"))
+            .SetApplicationName("ValuatorApp");
 
         builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
         {
