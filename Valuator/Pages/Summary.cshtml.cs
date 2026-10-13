@@ -1,55 +1,28 @@
-﻿using Microsoft.AspNetCore.Mvc.RazorPages;
-using StackExchange.Redis;
 using System.Globalization;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using StackExchange.Redis;
+using TextMessaging;
 
 namespace Valuator.Pages;
 
-public class SummaryModel : PageModel
+public class SummaryModel(IConnectionMultiplexer redis) : PageModel
 {
-    private readonly ILogger<SummaryModel> _logger;
-    private readonly IConnectionMultiplexer _redis;
+    public bool FoundRecord { get; private set; }
+    public Guid TextId { get; private set; }
+    public double? Rank { get; private set; }
+    public double? Similarity { get; private set; }
 
-    public SummaryModel(ILogger<SummaryModel> logger, IConnectionMultiplexer redis)
+    public async Task OnGetAsync(string? id)
     {
-        _logger = logger;
-        _redis = redis;
+        if (!Guid.TryParse(id, out var textId)) return;
+        TextId = textId;
+        var db = redis.GetDatabase();
+        var values = await db.StringGetAsync([StorageKeys.Text(textId), StorageKeys.Rank(textId), StorageKeys.Similarity(textId)]);
+        FoundRecord = !values[0].IsNull;
+        Rank = TryParse(values[1]);
+        Similarity = TryParse(values[2]);
     }
 
-    public bool FoundRecord { get; set; }
-    public double Rank { get; set; }
-    public double Similarity { get; set; }
-
-    public async Task OnGetAsync(string id)
-    {
-        _logger.LogDebug(id);
-
-        var db = _redis.GetDatabase();
-
-        var rankVal = await db.StringGetAsync($"RANK-{id}");
-        var simVal = await db.StringGetAsync($"SIMILARITY-{id}");
-
-        double? rank = TryParseDouble(rankVal);
-        double? similarity = TryParseDouble(simVal);
-
-        if (rank.HasValue && similarity.HasValue) {
-            FoundRecord = true;
-            Rank = rank.Value;
-            Similarity = similarity.Value;
-        } else {
-            FoundRecord = false;
-            Rank = 0.0;
-            Similarity = 0.0;
-        }
-    }
-
-    private static double? TryParseDouble(RedisValue v)
-    {
-        if (!v.HasValue)
-            return null;
-
-        if (double.TryParse(v.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
-            return d;
-
-        return null;
-    }
+    private static double? TryParse(RedisValue value) =>
+        double.TryParse(value.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ? result : null;
 }

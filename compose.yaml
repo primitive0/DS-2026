@@ -1,42 +1,82 @@
+x-app-environment: &app-environment
+  ConnectionStrings__Redis: "valkey:6379,abortConnect=false"
+  RabbitMQ__HostName: rabbitmq
+  RabbitMQ__UserName: student
+  RabbitMQ__Password: student
+
+x-app-dependencies: &app-dependencies
+  valkey:
+    condition: service_healthy
+  rabbitmq:
+    condition: service_healthy
+
 services:
   valkey:
     image: valkey/valkey:9
-    ports:
-      - "6379:6379"
-
-  valuator1:
-    build: ./Valuator
+    command: ["valkey-server", "--appendonly", "yes"]
     volumes:
-      - dpkeys:/keys
-    ports:
-      - "8080:8080"
+      - valkey-data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    hostname: rabbitmq
     environment:
+      RABBITMQ_DEFAULT_USER: student
+      RABBITMQ_DEFAULT_PASS: student
+    ports:
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    restart: unless-stopped
+
+  valuator:
+    build:
+      context: .
+      dockerfile: Valuator/Dockerfile
+    scale: 2
+    environment:
+      <<: *app-environment
       ASPNETCORE_URLS: "http://+:8080"
-      ConnectionStrings__Redis: "valkey:6379"
-    depends_on:
-      - valkey
-
-  valuator2:
-    build: ./Valuator
     volumes:
       - dpkeys:/keys
-    ports:
-      - "8081:8081"
+    depends_on: *app-dependencies
+    restart: unless-stopped
+
+  rankcalculator:
+    build:
+      context: .
+      dockerfile: RankCalculator/Dockerfile
+    scale: 2
     environment:
-      ASPNETCORE_URLS: "http://+:8081"
-      ConnectionStrings__Redis: "valkey:6379"
-    depends_on:
-      - valkey
+      <<: *app-environment
+      ProcessingDelayMilliseconds: "${RANK_DELAY_MS:-0}"
+    depends_on: *app-dependencies
+    restart: unless-stopped
 
   nginx:
-    image: nginx:alpine
+    image: nginx:1.28-alpine
     ports:
-      - "80:80"
+      - "8080:80"
     volumes:
       - ./nginx/conf/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - valuator1
-      - valuator2
+      valuator:
+        condition: service_started
+    restart: unless-stopped
 
 volumes:
   dpkeys:
+  valkey-data:
+  rabbitmq-data:
