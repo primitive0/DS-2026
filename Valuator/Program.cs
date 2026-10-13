@@ -1,5 +1,6 @@
 using StackExchange.Redis;
 using Microsoft.AspNetCore.DataProtection;
+using TextMessaging;
 
 namespace Valuator;
 
@@ -8,41 +9,33 @@ public class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-
-        // Add services to the container.
         builder.Services.AddRazorPages();
-
-        builder.Services
-            .AddDataProtection()
+        builder.Services.AddDataProtection()
             .PersistKeysToFileSystem(new DirectoryInfo("/keys"))
             .SetApplicationName("ValuatorApp");
-
-        builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
-        {
-            var cs = builder.Configuration.GetConnectionString("Redis");
-            if (string.IsNullOrWhiteSpace(cs))
-            {
-                throw new InvalidOperationException(
-                    "Connection string 'Redis' is not configured.");
-            }
-            return ConnectionMultiplexer.Connect(cs);
-        });
+        builder.Services.AddTextInfrastructure(builder.Configuration);
 
         var app = builder.Build();
-
-        // Configure the HTTP request pipeline.
-        if (!app.Environment.IsDevelopment())
+        app.Use(async (context, next) =>
         {
-            app.UseExceptionHandler("/Error");
-        }
+            context.Response.Headers["X-Valuator-Instance"] = Environment.MachineName;
+            await next();
+        });
+        if (!app.Environment.IsDevelopment()) app.UseExceptionHandler("/Error");
         app.UseStaticFiles();
-
         app.UseRouting();
-
         app.UseAuthorization();
-
         app.MapRazorPages();
-
+        app.MapGet("/health", async (IConnectionMultiplexer redis, RabbitPublisher publisher, CancellationToken token) =>
+        {
+            try
+            {
+                await redis.GetDatabase().PingAsync();
+                await publisher.EnsureReadyAsync(token);
+                return Results.Ok("ready");
+            }
+            catch { return Results.StatusCode(503); }
+        });
         app.Run();
     }
 }

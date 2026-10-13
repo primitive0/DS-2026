@@ -1,0 +1,61 @@
+<mxfile host="app.diagrams.net" version="24.7.17" type="device">
+  <diagram id="pa3" name="PA3 — контейнеры">
+    <mxGraphModel dx="1365" dy="1000" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1365" pageHeight="1000">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="boundary" value="Система оценки текста [Docker Compose]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#94a3b8;dashed=1;verticalAlign=top;align=left;spacingLeft=20;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="320" width="1285" height="540" />
+        </mxCell>
+        <mxCell id="browser" value="&lt;b&gt;Браузер пользователя&lt;/b&gt;&lt;br/&gt;[Клиент: HTML / HTTP]&lt;br/&gt;Ввод текста и просмотр результата" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6b7280;strokeColor=#0b4884;fontColor=#ffffff;fontSize=15;spacing=12;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="75" y="95" width="280" height="135" />
+        </mxCell>
+        <mxCell id="nginx" value="&lt;b&gt;Nginx × 1&lt;/b&gt;&lt;br/&gt;[Контейнер: Nginx 1.28]&lt;br/&gt;Балансировка HTTP-запросов&lt;br/&gt;Обновление адресов через Docker DNS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;strokeColor=#0b4884;fontColor=#ffffff;fontSize=15;spacing=12;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="75" y="365" width="280" height="145" />
+        </mxCell>
+        <mxCell id="valuator" value="&lt;b&gt;Valuator × 2&lt;/b&gt;&lt;br/&gt;[Контейнер: ASP.NET Core 10]&lt;br/&gt;Сохранение текста и similarity&lt;br/&gt;Публикация задания; страница результата" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;strokeColor=#0b4884;fontColor=#ffffff;fontSize=15;spacing=12;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="550" y="365" width="280" height="145" />
+        </mxCell>
+        <mxCell id="rabbitmq" value="&lt;b&gt;RabbitMQ × 1&lt;/b&gt;&lt;br/&gt;[Контейнер: RabbitMQ 4]&lt;br/&gt;Устойчивая очередь rank-tasks&lt;br/&gt;Сохраняемые сообщения и publisher confirms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;strokeColor=#0b4884;fontColor=#ffffff;fontSize=15;spacing=12;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="550" y="655" width="280" height="145" />
+        </mxCell>
+        <mxCell id="rank" value="&lt;b&gt;RankCalculator × 2&lt;/b&gt;&lt;br/&gt;[Контейнер: .NET 10]&lt;br/&gt;Конкурирующие потребители&lt;br/&gt;prefetch=1; ack после записи rank" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;strokeColor=#0b4884;fontColor=#ffffff;fontSize=15;spacing=12;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1010" y="655" width="280" height="145" />
+        </mxCell>
+        <mxCell id="valkey" value="&lt;b&gt;Valkey × 1&lt;/b&gt;&lt;br/&gt;[Контейнер: Valkey 9]&lt;br/&gt;TEXT-{id}, RANK-{id}&lt;br/&gt;SIMILARITY-{id}, SEEN-{hash}; AOF" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;strokeColor=#0b4884;fontColor=#ffffff;fontSize=15;spacing=12;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1010" y="365" width="280" height="145" />
+        </mxCell>
+        <mxCell id="edge-0" value="HTTP :8080&lt;br/&gt;Форма, POST и результат" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#374151;fontSize=14;labelBackgroundColor=#f8fafc;exitX=0.5;exitY=1.0;entryX=0.5;entryY=0.0;" edge="1" parent="1" source="browser" target="nginx">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="edge-1" value="HTTP :8080&lt;br/&gt;Балансировка между репликами" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#374151;fontSize=14;labelBackgroundColor=#f8fafc;exitX=1.0;exitY=0.503448275862069;entryX=0.0;entryY=0.503448275862069;" edge="1" parent="1" source="nginx" target="valuator">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="edge-2" value="RESP / TCP :6379&lt;br/&gt;Запись текста и similarity;&lt;br/&gt;чтение результатов" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#374151;fontSize=14;labelBackgroundColor=#f8fafc;exitX=1.0;exitY=0.503448275862069;entryX=0.0;entryY=0.503448275862069;" edge="1" parent="1" source="valuator" target="valkey">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="edge-3" value="AMQP 0-9-1 :5672&lt;br/&gt;CalculateRank { TextId }" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#374151;fontSize=14;labelBackgroundColor=#f8fafc;exitX=0.5;exitY=1.0;entryX=0.5;entryY=0.0;" edge="1" parent="1" source="valuator" target="rabbitmq">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="edge-4" value="AMQP 0-9-1 :5672&lt;br/&gt;Задание → потребитель;&lt;br/&gt;подтверждение ←" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#374151;fontSize=14;labelBackgroundColor=#f8fafc;exitX=1.0;exitY=0.496551724137931;entryX=0.0;entryY=0.496551724137931;" edge="1" parent="1" source="rabbitmq" target="rank">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="edge-5" value="RESP / TCP :6379&lt;br/&gt;Чтение текста;&lt;br/&gt;запись rank" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#374151;fontSize=14;labelBackgroundColor=#f8fafc;exitX=0.5;exitY=0.0;entryX=0.5;entryY=1.0;" edge="1" parent="1" source="rank" target="valkey">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="title" value="PA3 — C4: диаграмма контейнеров" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontSize=26;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="15" width="900" height="45" />
+        </mxCell>
+        <mxCell id="volumes" value="Общие тома: dpkeys — ключи ASP.NET; valkey-data — данные Valkey; rabbitmq-data — данные RabbitMQ." style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="75" y="870" width="1215" height="45" />
+        </mxCell>
+        <mxCell id="ports" value="RabbitMQ Management: HTTP :15672. Реплики приложений не публикуют внешние порты." style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="75" y="905" width="1215" height="30" />
+        </mxCell>
+        <mxCell id="scale" value="Количество экземпляров — по умолчанию. Масштабирование: docker compose up --scale." style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fillColor=none;strokeColor=none;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="75" y="935" width="1215" height="30" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

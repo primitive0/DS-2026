@@ -1,12 +1,21 @@
-﻿@page
+@page
 @model Valuator.Pages.SummaryModel
 @{
+    ViewData["Title"] = "Результат";
 }
 
 @if (Model.FoundRecord)
 {
-    <p>Оценка содержания: @Model.Rank</p>
-    <p>Плагиат: @Model.Similarity</p>
+    @if (Model.Rank.HasValue)
+    {
+        <p>Оценка содержания: @Model.Rank.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)</p>
+    }
+    else
+    {
+        <p>Оценка содержания не завершена</p>
+    }
+    <p>Плагиат: @(Model.Similarity?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "не вычислен")</p>
+    <a class="btn btn-primary" asp-page="/Summary" asp-route-id="@Model.TextId">Обновить результат</a>
 }
 else
 {

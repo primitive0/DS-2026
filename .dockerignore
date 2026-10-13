@@ -1,0 +1,13 @@
+**/bin
+**/obj
+.git
+.vs
+.idea
+.vscode
+.agents
+.codex
+.aws
+todo.txt
+docs
+tests
+README.md
