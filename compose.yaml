@@ -65,6 +65,20 @@ services:
     depends_on: *app-dependencies
     restart: unless-stopped
 
+  eventslogger:
+    build:
+      context: .
+      dockerfile: EventsLogger/Dockerfile
+    scale: 2
+    environment:
+      RabbitMQ__HostName: rabbitmq
+      RabbitMQ__UserName: student
+      RabbitMQ__Password: student
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
   nginx:
     image: nginx:1.28-alpine
     ports:

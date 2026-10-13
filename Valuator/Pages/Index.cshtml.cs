@@ -29,6 +29,7 @@ public class IndexModel(ILogger<IndexModel> logger, IConnectionMultiplexer redis
             var firstTime = await db.StringSetAsync($"SEEN-{hash.ToLowerInvariant()}", "1", when: When.NotExists);
             var similarity = firstTime ? 0.0 : 1.0;
             await db.StringSetAsync(StorageKeys.Similarity(id), similarity.ToString(CultureInfo.InvariantCulture));
+            await publisher.PublishEventAsync(new SimilarityCalculated(id, similarity), HttpContext.RequestAborted);
             await publisher.PublishRankTaskAsync(id, HttpContext.RequestAborted);
             logger.LogInformation("Accepted TextId={TextId} Similarity={Similarity} Instance={Instance}",
                 id, similarity, Environment.MachineName);

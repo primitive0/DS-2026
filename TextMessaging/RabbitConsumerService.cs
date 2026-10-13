@@ -33,7 +33,7 @@ public abstract class RabbitConsumerService(ConnectionFactory factory, ILogger l
                         catch (OperationCanceledException) when (session.IsCancellationRequested) { }
                         catch (Exception ex)
                         {
-                            logger.LogError(ex, "Consumer session failed; unacknowledged deliveries will be retried");
+                            logger.LogError(ex, "Consumer session failed; reconnecting");
                             session.Cancel();
                         }
                     };

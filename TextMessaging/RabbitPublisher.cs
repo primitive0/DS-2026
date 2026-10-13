@@ -13,6 +13,13 @@ public sealed class RabbitPublisher(ConnectionFactory factory, ILogger<RabbitPub
     public Task PublishRankTaskAsync(Guid id, CancellationToken token) =>
         PublishAsync("", Infrastructure.RankQueue, new CalculateRank(id), mandatory: true, token);
 
+    // Events are broadcast only to subscribers connected at publication time.
+    public Task PublishEventAsync(RankCalculated message, CancellationToken token) =>
+        PublishAsync(Infrastructure.EventsExchange, "", message, mandatory: false, token);
+
+    public Task PublishEventAsync(SimilarityCalculated message, CancellationToken token) =>
+        PublishAsync(Infrastructure.EventsExchange, "", message, mandatory: false, token);
+
     public async Task EnsureReadyAsync(CancellationToken token)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -61,6 +68,7 @@ public sealed class RabbitPublisher(ConnectionFactory factory, ILogger<RabbitPub
         _channel = await _connection.CreateChannelAsync(new CreateChannelOptions(
             publisherConfirmationsEnabled: true, publisherConfirmationTrackingEnabled: true), token);
         await Infrastructure.DeclareRankQueueAsync(_channel, token);
+        await Infrastructure.DeclareEventsExchangeAsync(_channel, token);
         logger.LogInformation("RabbitMQ publisher connected on {Instance}", Environment.MachineName);
     }
 

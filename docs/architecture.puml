@@ -1,0 +1,41 @@
+@startuml architecture
+!pragma layout smetana
+!include <C4/C4_Container>
+
+title PA4 — C4: диаграмма контейнеров
+LAYOUT_TOP_DOWN()
+
+Person(user, "Пользователь", "Отправляет текст и просматривает оценки")
+Container_Ext(browser, "Браузер", "HTML / HTTP", "Форма и страница результата")
+
+System_Boundary(system, "Система оценки текста — Docker Compose") {
+    Container(nginx, "Nginx × 1", "Nginx 1.28", "Балансировка запросов; обновление адресов через Docker DNS")
+    Container(valuator, "Valuator × 2", "ASP.NET Core 10", "Сохраняет текст и similarity; публикует задание и SimilarityCalculated")
+    ContainerDb(valkey, "Valkey × 1", "Valkey 9 / RESP", "TEXT-{id}, RANK-{id}, SIMILARITY-{id}, SEEN-{hash}; AOF")
+    ContainerQueue(rabbitmq, "RabbitMQ × 1", "RabbitMQ 4 / AMQP 0-9-1", "Очередь rank-tasks; fanout exchange text-events; отдельная временная очередь каждой подписки")
+    Container(rank, "RankCalculator × 2", ".NET 10", "Конкурирующие потребители; сохраняют rank и публикуют RankCalculated; затем ack")
+    Container(logger1, "EventsLogger — экземпляр 1", ".NET 10", "Собственная временная очередь; журнал обоих типов событий")
+    Container(logger2, "EventsLogger — экземпляр 2", ".NET 10", "Собственная временная очередь; журнал обоих типов событий")
+}
+
+Rel_D(user, browser, "Вводит текст и обновляет результат")
+Rel_D(browser, nginx, "GET формы и summary; POST → 302", "HTTP :8080")
+Rel_R(nginx, valuator, "Распределяет запросы между репликами", "HTTP :8080")
+Rel_R(valuator, valkey, "Записывает текст и similarity; читает результаты", "RESP / TCP :6379")
+Rel_D(valuator, rabbitmq, "CalculateRank { TextId }; SimilarityCalculated { TextId, Similarity }", "AMQP :5672 / JSON")
+Rel_R(rabbitmq, rank, "Доставляет задания; prefetch=1", "AMQP :5672 / JSON")
+Rel_U(rank, valkey, "Читает текст; записывает rank", "RESP / TCP :6379")
+Rel_L(rank, rabbitmq, "RankCalculated { TextId, Rank }; ack задания после publisher confirm", "AMQP :5672 / JSON")
+Rel_D(rabbitmq, logger1, "RankCalculated и SimilarityCalculated", "AMQP :5672 / JSON")
+Rel_D(rabbitmq, logger2, "RankCalculated и SimilarityCalculated", "AMQP :5672 / JSON")
+Lay_R(logger1, logger2)
+
+note bottom of rabbitmq
+  Задания сохраняются и распределяются между вычислителями.
+  События доставляются каждому подключённому подписчику.
+  Type содержит название события; подтверждение не требует подписчиков.
+end note
+
+footer Общие тома: dpkeys, valkey-data, rabbitmq-data.\nRabbitMQ Management: HTTP :15672.\nКоличество реплик по умолчанию: Valuator — 2, RankCalculator — 2, EventsLogger — 2.
+SHOW_LEGEND()
+@enduml

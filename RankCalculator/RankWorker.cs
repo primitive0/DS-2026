@@ -9,7 +9,7 @@ using TextMessaging;
 
 namespace RankCalculator;
 
-public sealed class RankWorker(ConnectionFactory factory, IConnectionMultiplexer redis,
+public sealed class RankWorker(ConnectionFactory factory, IConnectionMultiplexer redis, RabbitPublisher publisher,
     IConfiguration config, ILogger<RankWorker> logger) : RabbitConsumerService(factory, logger)
 {
     protected override async Task<string> DeclareQueueAsync(IChannel channel, CancellationToken token)
@@ -53,6 +53,7 @@ public sealed class RankWorker(ConnectionFactory factory, IConnectionMultiplexer
                 }
                 var rank = TextRank.Calculate(text.ToString());
                 await db.StringSetAsync(StorageKeys.Rank(task.TextId), rank.ToString(CultureInfo.InvariantCulture));
+                await publisher.PublishEventAsync(new RankCalculated(task.TextId, rank), token);
                 await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false, token);
                 logger.LogInformation("Rank calculated TextId={TextId} Rank={Rank} Instance={Instance}",
                     task.TextId, rank, Environment.MachineName);
