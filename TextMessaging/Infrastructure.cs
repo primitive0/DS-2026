@@ -31,7 +31,6 @@ public static class Infrastructure
             HostName = config["RabbitMQ:HostName"] ?? "localhost",
             UserName = config["RabbitMQ:UserName"] ?? "student",
             Password = config["RabbitMQ:Password"] ?? "student",
-            // Sessions are recreated after failure, including initial connection failure.
             AutomaticRecoveryEnabled = false,
             RequestedConnectionTimeout = TimeSpan.FromSeconds(5),
             RequestedHeartbeat = TimeSpan.FromSeconds(10),

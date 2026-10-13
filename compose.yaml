@@ -30,7 +30,7 @@ services:
       RABBITMQ_DEFAULT_USER: student
       RABBITMQ_DEFAULT_PASS: student
     ports:
-      - "15672:15672"
+      - "127.0.0.1:15672:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:

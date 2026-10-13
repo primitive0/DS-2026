@@ -78,7 +78,7 @@ docker compose down
 ```
 
 Приложение: http://localhost:8080. RabbitMQ Management: http://localhost:15672.
-Учётные данные лабораторного брокера: `student` / `student`.
+Панель брокера доступна только на localhost. Учётные данные: `student` / `student`.
 По умолчанию работают два Valuator, два RankCalculator и два EventsLogger.
 
 ```bash
@@ -99,8 +99,7 @@ EventsLogger зависит только от RabbitMQ и не обращает�
 
 ## Самостоятельная проверка
 
-Сборка, тесты и запуск Compose при подготовке PA4 не выполнялись по просьбе пользователя.
-Команды для последующей проверки:
+Команды для локальной проверки:
 
 ```bash
 dotnet build DS-course.sln -c Release

@@ -13,7 +13,6 @@ public sealed class RabbitPublisher(ConnectionFactory factory, ILogger<RabbitPub
     public Task PublishRankTaskAsync(Guid id, CancellationToken token) =>
         PublishAsync("", Infrastructure.RankQueue, new CalculateRank(id), mandatory: true, token);
 
-    // Events are broadcast only to subscribers connected at publication time.
     public Task PublishEventAsync(RankCalculated message, CancellationToken token) =>
         PublishAsync(Infrastructure.EventsExchange, "", message, mandatory: false, token);
 
@@ -48,7 +47,6 @@ public sealed class RabbitPublisher(ConnectionFactory factory, ILogger<RabbitPub
                 Type = typeof(T).Name,
                 Persistent = true
             };
-            // Confirmation tracking makes this await include the broker's acknowledgement.
             await _channel!.BasicPublishAsync(exchange, routingKey, mandatory, properties,
                 JsonSerializer.SerializeToUtf8Bytes(message), timeout.Token);
         }
